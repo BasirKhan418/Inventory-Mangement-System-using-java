@@ -3,13 +3,13 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Arrays;
 
 public class EnhancedInventoryManagementSystem extends JFrame {
 
-    private Map<String, Integer> inventory;
-    private Map<Integer, String> productData;
+    private String[] productNames;
+    private int[] productQuantities;
+    private int[] productIds;
 
     private JTextField adminItemNameField;
     private JTextField adminQuantityField;
@@ -25,8 +25,9 @@ public class EnhancedInventoryManagementSystem extends JFrame {
 
     public EnhancedInventoryManagementSystem() {
         super("Enhanced Inventory Management System");
-        inventory = new HashMap<>();
-        productData = new HashMap<>();
+        productNames = new String[100]; // Assuming a maximum of 100 products
+        productQuantities = new int[100];
+        productIds = new int[100];
 
         adminItemNameField = new JTextField(20);
         adminQuantityField = new JTextField(5);
@@ -36,36 +37,16 @@ public class EnhancedInventoryManagementSystem extends JFrame {
         customerQuantityField = new JTextField(5);
 
         JButton adminAddButton = new JButton("Add Product");
-        adminAddButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                addProduct();
-            }
-        });
+        adminAddButton.addActionListener(e -> addProduct());
 
         JButton adminUpdateButton = new JButton("Update Quantity");
-        adminUpdateButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                updateQuantity();
-            }
-        });
+        adminUpdateButton.addActionListener(e -> updateQuantity());
 
         JButton customerSellButton = new JButton("Sell Product");
-        customerSellButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                sellProduct();
-            }
-        });
+        customerSellButton.addActionListener(e -> sellProduct());
 
         JButton viewBillButton = new JButton("View Bill");
-        viewBillButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                showBill();
-            }
-        });
+        viewBillButton.addActionListener(e -> showBill());
 
         tableModel = new DefaultTableModel();
         inventoryTable = new JTable(tableModel);
@@ -124,10 +105,15 @@ public class EnhancedInventoryManagementSystem extends JFrame {
         if (!itemIdText.isEmpty() && !itemName.isEmpty() && !quantityText.isEmpty()) {
             int itemId = Integer.parseInt(itemIdText);
             int quantity = Integer.parseInt(quantityText);
-            String productKey = itemName;
-            inventory.put(productKey, quantity);
-            productData.put(itemId, productKey);
-            updateTable();
+
+            if (itemId >= 0 && itemId < productNames.length) {
+                productIds[itemId] = itemId;
+                productNames[itemId] = itemName;
+                productQuantities[itemId] = quantity;
+                updateTable();
+            } else {
+                JOptionPane.showMessageDialog(this, "Invalid product ID.");
+            }
         } else {
             JOptionPane.showMessageDialog(this, "Please enter product ID, name, and quantity.");
         }
@@ -141,15 +127,14 @@ public class EnhancedInventoryManagementSystem extends JFrame {
 
         if (!itemIdText.isEmpty() && !quantityText.isEmpty()) {
             int itemId = Integer.parseInt(itemIdText);
-            String productKey = productData.get(itemId);
 
-            if (inventory.containsKey(productKey)) {
-                int currentQuantity = inventory.get(productKey);
+            if (itemId >= 0 && itemId < productNames.length) {
+                int currentQuantity = productQuantities[itemId];
                 int newQuantity = Integer.parseInt(quantityText);
-                inventory.put(productKey, currentQuantity + newQuantity);
+                productQuantities[itemId] = currentQuantity + newQuantity;
                 updateTable();
             } else {
-                JOptionPane.showMessageDialog(this, "Product not found in inventory.");
+                JOptionPane.showMessageDialog(this, "Invalid product ID.");
             }
         } else {
             JOptionPane.showMessageDialog(this, "Please enter product ID and quantity.");
@@ -164,23 +149,22 @@ public class EnhancedInventoryManagementSystem extends JFrame {
 
         if (!itemIdText.isEmpty() && !quantityText.isEmpty()) {
             int itemId = Integer.parseInt(itemIdText);
-            String productKey = productData.get(itemId);
 
-            if (inventory.containsKey(productKey)) {
-                int availableQuantity = inventory.get(productKey);
+            if (itemId >= 0 && itemId < productNames.length) {
+                int availableQuantity = productQuantities[itemId];
                 int requestedQuantity = Integer.parseInt(quantityText);
 
                 if (requestedQuantity <= availableQuantity) {
                     int updatedQuantity = availableQuantity - requestedQuantity;
-                    inventory.put(productKey, updatedQuantity);
-                    generateBill(productKey, itemId, requestedQuantity);
-                    showgenerateBill(productKey, itemId, requestedQuantity);
+                    productQuantities[itemId] = updatedQuantity;
+                    generateBill(productNames[itemId], itemId, requestedQuantity);
+                    showgenerateBill(productNames[itemId], itemId, requestedQuantity);
                     updateTable();
                 } else {
                     JOptionPane.showMessageDialog(this, "Not enough quantity available for sale.");
                 }
             } else {
-                JOptionPane.showMessageDialog(this, "Product not found in inventory.");
+                JOptionPane.showMessageDialog(this, "Invalid product ID.");
             }
         } else {
             JOptionPane.showMessageDialog(this, "Please enter product ID and quantity.");
@@ -201,6 +185,7 @@ public class EnhancedInventoryManagementSystem extends JFrame {
 
         billTextArea.append(billDetails);
     }
+
     private void showgenerateBill(String productName, int productId, int quantity) {
         double pricePerItem = 5.0; // You can set the price per item as needed
         double totalAmount = pricePerItem * quantity;
@@ -210,14 +195,17 @@ public class EnhancedInventoryManagementSystem extends JFrame {
                 "Quantity: " + quantity + "\n" +
                 "Price per Item: $" + pricePerItem + "\n" +
                 "Total Amount: $" + totalAmount + "\n\n";
- JOptionPane.showMessageDialog(this, billDetails, "Product Sold Successfilly - BILL DETAILS", JOptionPane.INFORMATION_MESSAGE);
-        
+
+        JOptionPane.showMessageDialog(this, billDetails, "Product Sold Successfully - BILL DETAILS", JOptionPane.INFORMATION_MESSAGE);
     }
+
     private void updateTable() {
         tableModel.setRowCount(0);
-        for (Map.Entry<Integer, String> entry : productData.entrySet()) {
-            Object[] rowData = {entry.getKey(), entry.getValue(), inventory.get(entry.getValue())};
-            tableModel.addRow(rowData);
+        for (int i = 0; i < productIds.length; i++) {
+            if (productIds[i] != 0) {
+                Object[] rowData = {productIds[i], productNames[i], productQuantities[i]};
+                tableModel.addRow(rowData);
+            }
         }
     }
 
@@ -243,11 +231,6 @@ public class EnhancedInventoryManagementSystem extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                new EnhancedInventoryManagementSystem();
-            }
-        });
+        SwingUtilities.invokeLater(() -> new EnhancedInventoryManagementSystem());
     }
 }
